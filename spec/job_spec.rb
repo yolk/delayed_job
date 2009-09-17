@@ -32,6 +32,10 @@ class SimpleJobReturningObject < SimpleJob
   end
 end
 
+class SimpleJobKeepSuccessful < SimpleJob
+  DESTROY_AFTER_SUCESS = false
+end
+
 module M
   class ModuleJob
     cattr_accessor :runs; self.runs = 0
@@ -132,6 +136,18 @@ describe Delayed::Job do
     Delayed::Job.destroy_successful_jobs = false
 
     Delayed::Job.enqueue SimpleJob.new
+    Delayed::Job.work_off
+
+    Delayed::Job.count.should == 1
+
+    Delayed::Job.destroy_successful_jobs = default
+  end
+  
+  it "should be kept if it succeeded and we don't want to destroy this specific job" do
+    default = Delayed::Job.destroy_successful_jobs
+    Delayed::Job.destroy_successful_jobs = true
+
+    Delayed::Job.enqueue SimpleJobKeepSuccessful.new
     Delayed::Job.work_off
 
     Delayed::Job.count.should == 1

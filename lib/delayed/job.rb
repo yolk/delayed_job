@@ -23,6 +23,11 @@ module Delayed
     # If you want to keep them around (for statistics/monitoring),
     # set this to false.
     cattr_accessor :destroy_successful_jobs
+    def destroy_successful_jobs
+      defined?(payload_object.class::DESTROY_AFTER_SUCESS) ?
+        payload_object.class::DESTROY_AFTER_SUCESS :
+        @@destroy_successful_jobs
+    end
     self.destroy_successful_jobs = true
 
     # Every worker has a unique name which by default is the pid of the process.
