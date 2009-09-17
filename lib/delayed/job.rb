@@ -97,7 +97,7 @@ module Delayed
 
       begin
         runtime =  Benchmark.realtime do
-          invoke_job # TODO: raise error if takes longer than max_run_time
+          Timeout.timeout(max_run_time.to_i) { invoke_job }
         end
         destroy_successful_jobs ? destroy :
           update_attribute(:finished_at, Time.now)
