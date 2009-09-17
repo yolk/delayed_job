@@ -14,6 +14,10 @@ class LongRunningJob
   def perform; sleep 250; end
 end
 
+class SimpleJobWithCustomMaxAttempts < SimpleJob
+  MAX_ATTEMPTS = 3
+end
+
 module M
   class ModuleJob
     cattr_accessor :runs; self.runs = 0
@@ -214,6 +218,18 @@ describe Delayed::Job do
     @job.should_receive(:destroy)
     @job.reschedule 'FAIL'
 
+    Delayed::Job.destroy_failed_jobs = default
+  end
+  
+  it "should use max_attempts from handler-Class when defined" do
+    default = Delayed::Job.destroy_failed_jobs
+    Delayed::Job.destroy_failed_jobs = true
+    
+    @job = Delayed::Job.create :payload_object => SimpleJobWithCustomMaxAttempts.new, :attempts => 3
+    @job.should_receive(:destroy)
+    @job.reschedule 'FAIL'
+    SimpleJobWithCustomMaxAttempts.runs.should eql(0)
+    
     Delayed::Job.destroy_failed_jobs = default
   end
 

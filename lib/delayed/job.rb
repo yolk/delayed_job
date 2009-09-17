@@ -71,7 +71,7 @@ module Delayed
     # Reschedule the job in the future (when a job fails).
     # Uses an exponential scale depending on the number of failed attempts.
     def reschedule(message, backtrace = [], time = nil)
-      if self.attempts < MAX_ATTEMPTS
+      if self.attempts < max_attempts
         time ||= Job.db_time_now + (attempts ** 4) + 5
 
         self.attempts    += 1
@@ -257,7 +257,15 @@ module Delayed
     def self.db_time_now
       (ActiveRecord::Base.default_timezone == :utc) ? Time.now.utc : Time.now
     end
-
+    
+    # Use handler-specific maximal attempts before giving up.
+    # Uses MAX_ATTEMPTS when not defined on handler
+    def max_attempts
+      defined?(payload_object.class::MAX_ATTEMPTS) ? 
+        payload_object.class::MAX_ATTEMPTS :
+        MAX_ATTEMPTS
+    end
+    
   protected
 
     def before_save
