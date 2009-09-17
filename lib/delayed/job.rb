@@ -235,6 +235,8 @@ module Delayed
         attempt_to_load(handler_class || handler.class)
         handler = YAML.load(source)
       end
+      
+      inject_delayed_job_method(handler)
 
       return handler if handler.respond_to?(:perform)
 
@@ -264,6 +266,14 @@ module Delayed
       defined?(payload_object.class::MAX_ATTEMPTS) ? 
         payload_object.class::MAX_ATTEMPTS :
         MAX_ATTEMPTS
+    end
+    
+    def inject_delayed_job_method(handler)
+      handler.class_eval("
+        def delayed_job
+          Delayed::Job.find(#{id})
+        end  
+      ")
     end
     
   protected

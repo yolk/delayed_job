@@ -18,6 +18,13 @@ class SimpleJobWithCustomMaxAttempts < SimpleJob
   MAX_ATTEMPTS = 3
 end
 
+class SimpleJobAccessingInjectedJob < SimpleJob
+  def perform
+    self.delayed_job.accessing_stubbed_method(123)
+    super
+  end
+end
+
 module M
   class ModuleJob
     cattr_accessor :runs; self.runs = 0
@@ -27,7 +34,7 @@ module M
 end
 
 describe Delayed::Job do
-  before  do               
+  before do
     Delayed::Job.max_priority = nil
     Delayed::Job.min_priority = nil      
     
@@ -243,6 +250,13 @@ describe Delayed::Job do
   it "should never find failed jobs" do
     @job = Delayed::Job.create :payload_object => SimpleJob.new, :attempts => 50, :failed_at => Time.now
     Delayed::Job.find_available(1).length.should == 0
+  end
+
+  it "should inject delayed_job method into payload_object" do
+    Delayed::Job.enqueue SimpleJob.new
+    job = Delayed::Job.find(:first)
+    job.payload_object.delayed_job.should eql(job)
+    SimpleJob.new.respond_to?(:delayed_job).should be_false
   end
 
   context "when another worker is already performing an task, it" do
