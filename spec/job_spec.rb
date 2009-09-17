@@ -25,6 +25,13 @@ class SimpleJobAccessingInjectedJob < SimpleJob
   end
 end
 
+class SimpleJobReturningObject < SimpleJob
+  def perform
+    super
+    {:i_am => "the result"}
+  end
+end
+
 module M
   class ModuleJob
     cattr_accessor :runs; self.runs = 0
@@ -128,6 +135,18 @@ describe Delayed::Job do
     Delayed::Job.work_off
 
     Delayed::Job.count.should == 1
+
+    Delayed::Job.destroy_successful_jobs = default
+  end
+  
+  it "should write result to job if it succeeded and we don't want to destroy jobs" do
+    default = Delayed::Job.destroy_successful_jobs
+    Delayed::Job.destroy_successful_jobs = false
+
+    Delayed::Job.enqueue SimpleJobReturningObject.new
+    Delayed::Job.work_off
+
+    Delayed::Job.last.result.should == {:i_am => "the result"}
 
     Delayed::Job.destroy_successful_jobs = default
   end

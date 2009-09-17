@@ -11,6 +11,7 @@ module Delayed
     MAX_ATTEMPTS = 25
     MAX_RUN_TIME = 4.hours
     set_table_name :delayed_jobs
+    serialize :result
 
     # By default failed jobs are destroyed after too many attempts.
     # If you want to keep them around (perhaps to inspect the reason
@@ -97,7 +98,9 @@ module Delayed
 
       begin
         runtime =  Benchmark.realtime do
-          Timeout.timeout(max_run_time.to_i) { invoke_job }
+          Timeout.timeout(max_run_time.to_i) do 
+            self.result = invoke_job
+          end
         end
         destroy_successful_jobs ? destroy :
           update_attribute(:finished_at, Time.now)
