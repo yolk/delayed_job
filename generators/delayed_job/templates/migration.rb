@@ -11,6 +11,7 @@ class CreateDelayedJobs < ActiveRecord::Migration
       table.string   :locked_by                    # Who is working on this object (if locked)
       table.text     :result                       # YAML-encoded string of the object returned by the perform action
       table.datetime :finished_at
+      table.string   :unique_key
       table.timestamps
     end
 

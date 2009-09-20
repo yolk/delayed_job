@@ -29,7 +29,13 @@ module Delayed
         @@destroy_successful_jobs
     end
     self.destroy_successful_jobs = true
-
+    
+    # Every job has a unique key which you can pass to the user (javascript) without
+    # alowing him to quess subsequent keys.
+    before_create do |job|
+      job.unique_key ||= ActiveSupport::SecureRandom.hex(10)
+    end
+    
     # Every worker has a unique name which by default is the pid of the process.
     # There are some advantages to overriding this with something which survives worker retarts:
     # Workers can safely resume working on tasks which are locked by themselves. The worker will assume that it crashed before.

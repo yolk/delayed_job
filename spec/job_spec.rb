@@ -95,8 +95,19 @@ describe Delayed::Job do
 
     SimpleJob.runs.should == 1
   end
-                     
-                     
+  
+  it "should set unique_key automatically to random value if not set" do
+    key = Delayed::Job.create(:payload_object => ErrorJob.new ).unique_key
+    key.should_not be_nil
+    key.should_not eql(Delayed::Job.create(:payload_object => ErrorJob.new ).unique_key)
+    key.size.should eql(20)
+  end
+  
+  it "should not set unique_key automatically if already set" do
+    key = "123"
+    Delayed::Job.create(:payload_object => ErrorJob.new, :unique_key => key).unique_key.should == key
+  end                  
+            
   it "should work with eval jobs" do
     $eval_job_ran = false
 
