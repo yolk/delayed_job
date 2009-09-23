@@ -47,7 +47,15 @@ module Delayed
       
       # Replace the default logger…too bad Rails doesn't make this easier
       Rails.logger.instance_eval do
-        @log.reopen File.join(RAILS_ROOT, 'log', 'delayed_job.log')
+        if @logdev
+          @logdev = Logger::LogDevice.new(
+            File.join(RAILS_ROOT, 'log', 'delayed_job.log'), 
+            :shift_age    => @logdev.instance_eval("@shift_age"),
+            :shift_size   => @logdev.instance_eval("@shift_size")
+          )
+        else
+          @log.reopen File.join(RAILS_ROOT, 'log', 'delayed_job.log')
+        end
       end
       Delayed::Worker.logger = Rails.logger
       ActiveRecord::Base.connection.reconnect!
