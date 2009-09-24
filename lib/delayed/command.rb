@@ -35,7 +35,7 @@ module Delayed
   
     def daemonize
       worker_count.times do |worker_index|
-        process_name = worker_count == 1 ? "delayed_job" : "delayed_job.#{worker_index}"
+        process_name = worker_count == 1 ? process_base_name : "#{process_base_name}.#{worker_index}"
         Daemons.run_proc(process_name, :dir => "#{RAILS_ROOT}/tmp/pids", :dir_mode => :normal, :ARGV => @args) do |*args|
           run process_name
         end
@@ -67,6 +67,13 @@ module Delayed
       logger.fatal e
       STDERR.puts e.message
       exit 1
+    end
+    
+    private
+    
+    def process_base_name
+      rails_env = ENV['RAILS_ENV'] || Rails.env || 'development'
+      rails_env == "production" ? "delayed_job" : "delayed_job.#{rails_env}"
     end
     
   end
