@@ -47,7 +47,10 @@ module Delayed
 
     def say(text)
       puts text unless @quiet
-      logger.info text if logger
+      if logger
+        logger.info text
+        logger.flush if logger.respond_to?(:flush)
+      end
     end
 
   end
