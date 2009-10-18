@@ -61,7 +61,7 @@ describe Delayed::Job do
   end
 
   it "should not set run_at automatically if already set" do
-    later = 5.minutes.from_now
+    later = (Delayed::Job.db_time_now + 5.minutes)
     Delayed::Job.create(:payload_object => ErrorJob.new, :run_at => later).run_at.should == later
   end
 
@@ -80,7 +80,7 @@ describe Delayed::Job do
   end
 
   it "should be able to set run_at when enqueuing items" do
-    later = 5.minutes.from_now
+    later = (Delayed::Job.db_time_now + 5.minutes)
     Delayed::Job.enqueue SimpleJob.new, 5, later
 
     # use be close rather than equal to because millisecond values cn be lost in DB round trip
@@ -294,7 +294,7 @@ describe Delayed::Job do
   end
 
   it "should never find failed jobs" do
-    @job = Delayed::Job.create :payload_object => SimpleJob.new, :attempts => 50, :failed_at => Time.now
+    @job = Delayed::Job.create :payload_object => SimpleJob.new, :attempts => 50, :failed_at => Delayed::Job.db_time_now
     Delayed::Job.find_available(1).length.should == 0
   end
 
@@ -321,7 +321,7 @@ describe Delayed::Job do
     end      
     
     it "should be able to get access to the task if it was started more then max_age ago" do
-      @job.locked_at = 5.hours.ago
+      @job.locked_at = Delayed::Job.db_time_now - 5.hours
       @job.save
 
       @job.lock_exclusively! 4.hours, 'worker2'
@@ -363,7 +363,7 @@ describe Delayed::Job do
     end
 
     it "should not allow a second worker to get exclusive access if failed to be processed by worker1 and run_at time is now in future (due to backing off behaviour)" do
-      @job.update_attributes(:attempts => 1, :run_at => Time.now + 1.day)
+      @job.update_attributes(:attempts => 1, :run_at => 1.day.from_now)
       @job_copy_for_worker_2.lock_exclusively!(4.hours, 'worker2').should == false
     end
   end
