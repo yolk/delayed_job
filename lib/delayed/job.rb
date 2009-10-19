@@ -276,11 +276,11 @@ module Delayed
       (ActiveRecord::Base.default_timezone == :utc) ? Time.now.utc : Time.zone.now
     end
     
-    # Use handler-specific maximal attempts before giving up.
-    # Uses MAX_ATTEMPTS when not defined on handler
+    # Use handler-specific max_attempts before giving up.
+    # Uses Delayed::Job::max_attempts when not defined on handler
     def max_attempts
-      payload_object && defined?(payload_object.class::MAX_ATTEMPTS) ? 
-        payload_object.class::MAX_ATTEMPTS :
+      payload_object && defined?(payload_object.class::max_attempts) ? 
+        payload_object.class::max_attempts :
         self.class.max_attempts
     end
     

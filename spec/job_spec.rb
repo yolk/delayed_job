@@ -15,7 +15,8 @@ class LongRunningJob
 end
 
 class SimpleJobWithCustomMaxAttempts < SimpleJob
-  MAX_ATTEMPTS = 3
+  @@max_attempts = 3
+  cattr_reader :max_attempts
 end
 
 class SimpleJobAccessingInjectedJob < SimpleJob
