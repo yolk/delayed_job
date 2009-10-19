@@ -34,7 +34,8 @@ class SimpleJobReturningObject < SimpleJob
 end
 
 class SimpleJobKeepSuccessful < SimpleJob
-  DESTROY_AFTER_SUCESS = false
+  @@destroy_after_success = false
+  cattr_reader :destroy_after_success
 end
 
 module M

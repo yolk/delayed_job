@@ -27,8 +27,8 @@ module Delayed
     # set this to false.
     cattr_accessor :destroy_successful_jobs
     def destroy_successful_jobs
-      defined?(payload_object.class::DESTROY_AFTER_SUCESS) ?
-        payload_object.class::DESTROY_AFTER_SUCESS :
+      payload_object && defined?(payload_object.class::destroy_after_success) ?
+        payload_object.class::destroy_after_success :
         @@destroy_successful_jobs
     end
     self.destroy_successful_jobs = true
