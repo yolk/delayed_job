@@ -279,9 +279,7 @@ module Delayed
     # Use handler-specific max_attempts before giving up.
     # Uses Delayed::Job::max_attempts when not defined on handler
     def max_attempts
-      payload_object && defined?(payload_object.class::max_attempts) ? 
-        payload_object.class::max_attempts :
-        self.class.max_attempts
+      (payload_object.class::max_attempts rescue nil) || self.class.max_attempts
     end
     
     def inject_delayed_job_method(handler)

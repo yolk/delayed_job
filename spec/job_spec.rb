@@ -15,8 +15,7 @@ class LongRunningJob
 end
 
 class SimpleJobWithCustomMaxAttempts < SimpleJob
-  @@max_attempts = 3
-  cattr_reader :max_attempts
+  def self.max_attempts;3;end
 end
 
 class SimpleJobAccessingInjectedJob < SimpleJob
@@ -43,7 +42,6 @@ module M
     cattr_accessor :runs; self.runs = 0
     def perform; @@runs += 1; end    
   end
-  
 end
 
 describe Delayed::Job do
