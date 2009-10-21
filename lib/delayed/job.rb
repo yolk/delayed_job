@@ -14,24 +14,12 @@ module Delayed
     cattr_accessor :max_attempts, :max_run_time
     
     set_table_name :delayed_jobs
-    serialize :result
 
     # By default failed jobs are destroyed after too many attempts.
     # If you want to keep them around (perhaps to inspect the reason
     # for the failure), set this to false.
     cattr_accessor :destroy_failed_jobs
     self.destroy_failed_jobs = true
-
-    # By default successful jobs are destroyed after finished.
-    # If you want to keep them around (for statistics/monitoring),
-    # set this to false.
-    cattr_accessor :destroy_successful_jobs
-    def destroy_successful_jobs
-      payload_object && defined?(payload_object.class::destroy_after_success) ?
-        payload_object.class::destroy_after_success :
-        @@destroy_successful_jobs
-    end
-    self.destroy_successful_jobs = true
     
     # Every job has a unique key which you can pass to the user (javascript) without
     # alowing him to quess subsequent keys.
@@ -45,7 +33,7 @@ module Delayed
     cattr_accessor :worker_name
     self.worker_name = "host:#{Socket.gethostname} pid:#{Process.pid}" rescue "pid:#{Process.pid}"
 
-    NextTaskSQL         = '(run_at <= ? AND (locked_at IS NULL OR locked_at < ?) OR (locked_by = ?)) AND failed_at IS NULL AND finished_at IS NULL'
+    NextTaskSQL         = '(run_at <= ? AND (locked_at IS NULL OR locked_at < ?) OR (locked_by = ?)) AND failed_at IS NULL'
     NextTaskOrder       = 'priority DESC, run_at ASC'
 
     ParseObjectFromYaml = /\!ruby\/\w+\:([^\s]+)/
@@ -110,13 +98,10 @@ module Delayed
       end
 
       begin
-        runtime =  Benchmark.realtime do
-          Timeout.timeout(max_run_time.to_i) do 
-            self.result = invoke_job
-          end
+        runtime = Benchmark.realtime do
+          Timeout.timeout(max_run_time.to_i) { invoke_job }
+          destroy
         end
-        destroy_successful_jobs ? destroy :
-          update_attribute(:finished_at, Time.now)
         # TODO: warn if runtime > max_run_time ?
         logger.info "* [JOB] #{name} completed after %.4f" % runtime
         return true  # did work

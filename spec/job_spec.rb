@@ -25,13 +25,6 @@ class SimpleJobAccessingInjectedJob < SimpleJob
   end
 end
 
-class SimpleJobReturningObject < SimpleJob
-  def perform
-    super
-    {:i_am => "the result"}
-  end
-end
-
 class SimpleJobKeepSuccessful < SimpleJob
   @@destroy_after_success = false
   cattr_reader :destroy_after_success
@@ -128,72 +121,6 @@ describe Delayed::Job do
     Delayed::Job.work_off
 
     M::ModuleJob.runs.should == 1
-  end
-
-  it "should be destroyed if it succeeded and we want to destroy jobs" do
-    default = Delayed::Job.destroy_successful_jobs
-    Delayed::Job.destroy_successful_jobs = true
-
-    Delayed::Job.enqueue SimpleJob.new
-    Delayed::Job.work_off
-
-    Delayed::Job.count.should == 0
-
-    Delayed::Job.destroy_successful_jobs = default
-  end
-
-  it "should be kept if it succeeded and we don't want to destroy jobs" do
-    default = Delayed::Job.destroy_successful_jobs
-    Delayed::Job.destroy_successful_jobs = false
-
-    Delayed::Job.enqueue SimpleJob.new
-    Delayed::Job.work_off
-
-    Delayed::Job.count.should == 1
-
-    Delayed::Job.destroy_successful_jobs = default
-  end
-  
-  it "should be kept if it succeeded and we don't want to destroy this specific job" do
-    default = Delayed::Job.destroy_successful_jobs
-    Delayed::Job.destroy_successful_jobs = true
-
-    Delayed::Job.enqueue SimpleJobKeepSuccessful.new
-    Delayed::Job.work_off
-
-    Delayed::Job.count.should == 1
-
-    Delayed::Job.destroy_successful_jobs = default
-  end
-  
-  it "should write result to job if it succeeded and we don't want to destroy jobs" do
-    default = Delayed::Job.destroy_successful_jobs
-    Delayed::Job.destroy_successful_jobs = false
-
-    Delayed::Job.enqueue SimpleJobReturningObject.new
-    Delayed::Job.work_off
-
-    Delayed::Job.last.result.should == {:i_am => "the result"}
-
-    Delayed::Job.destroy_successful_jobs = default
-  end
-
-  it "should be finished if it succeeded and we don't want to destroy jobs" do
-    default = Delayed::Job.destroy_successful_jobs
-    Delayed::Job.destroy_successful_jobs = false
-    @job = Delayed::Job.create :payload_object => SimpleJob.new
-
-    @job.reload.finished_at.should == nil
-    Delayed::Job.work_off
-    @job.reload.finished_at.should_not == nil
-
-    Delayed::Job.destroy_successful_jobs = default
-  end
-
-  it "should never find finished jobs" do
-    @job = Delayed::Job.create :payload_object => SimpleJob.new,
-      :finished_at => Time.now
-    Delayed::Job.find_available(1).length.should == 0
   end
 
   it "should re-schedule by about 1 second at first and increment this more and more minutes when it fails to execute properly" do

@@ -24,8 +24,6 @@ ActiveRecord::Schema.define do
     table.datetime :locked_at
     table.string   :locked_by
     table.datetime :failed_at
-    table.datetime :finished_at
-    table.text     :result
     table.string   :unique_key
     table.timestamps
   end
