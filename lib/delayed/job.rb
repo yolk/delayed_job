@@ -74,7 +74,7 @@ module Delayed
     # Reschedule the job in the future (when a job fails).
     # Uses an exponential scale depending on the number of failed attempts.
     def reschedule(message, backtrace = [], time = nil)
-      if (self.attempts += 1) <= max_attempts
+      if (self.attempts += 1) < max_attempts
         time ||= Job.db_time_now + (attempts ** 4) + 5
 
         self.run_at       = time

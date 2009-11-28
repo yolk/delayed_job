@@ -190,12 +190,12 @@ describe Delayed::Job do
       
       it "should be destroyed if it failed more than Job::max_attempts times" do
         @job.should_receive(:destroy)
-        (Delayed::Job::max_attempts + 1).times { @job.reschedule 'FAIL' }
+        (Delayed::Job::max_attempts).times { @job.reschedule 'FAIL' }
       end
       
       it "should not be destroyed if failed fewer than Job::max_attempts times" do
         @job.should_not_receive(:destroy)
-        Delayed::Job::max_attempts.times { @job.reschedule 'FAIL' }
+        (Delayed::Job::max_attempts - 1).times { @job.reschedule 'FAIL' }
       end
     end
     
@@ -204,14 +204,14 @@ describe Delayed::Job do
         Delayed::Job.destroy_failed_jobs = false
       end
       
-      it "should be failed if it failed more than Job::max_attempts times" do
+      it "should be failed if it failed Job::max_attempts times" do
         @job.reload.failed_at.should == nil
-        (Delayed::Job::max_attempts + 1).times { @job.reschedule 'FAIL' }
+        (Delayed::Job::max_attempts).times { @job.reschedule 'FAIL' }
         @job.reload.failed_at.should_not == nil
       end
 
       it "should not be failed if it failed fewer than Job::max_attempts times" do
-        Delayed::Job::max_attempts.times { @job.reschedule 'FAIL' }
+        (Delayed::Job::max_attempts - 1).times { @job.reschedule 'FAIL' }
         @job.reload.failed_at.should == nil
       end
       
