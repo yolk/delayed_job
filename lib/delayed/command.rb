@@ -75,8 +75,7 @@ module Delayed
     private
     
     def process_base_name
-      rails_env = ENV['RAILS_ENV'] || Rails.env || 'development'
-      rails_env == "production" ? "delayed_job" : "delayed_job.#{rails_env}"
+      "delayed_job.#{ENV['RAILS_ENV'] || Rails.env || 'development'}"
     end
     
   end
