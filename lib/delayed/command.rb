@@ -41,7 +41,7 @@ module Delayed
       end
       
       worker_count.times do |worker_index|
-        process_name = worker_count == 1 ? process_base_name : "#{process_base_name}.#{worker_index}"
+        process_name = "#{process_base_name}.#{worker_index}"
         Daemons.run_proc(process_name, :dir => "#{RAILS_ROOT}/tmp/pids", :dir_mode => :normal, :ARGV => @args) do |*args|
           run process_name
         end
