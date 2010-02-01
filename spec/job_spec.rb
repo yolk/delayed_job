@@ -18,11 +18,8 @@ class SimpleJobWithCustomMaxAttempts < SimpleJob
   def self.max_attempts;3;end
 end
 
-class SimpleJobAccessingInjectedJob < SimpleJob
-  def perform
-    self.delayed_job.accessing_stubbed_method(123)
-    super
-  end
+class SimpleJobWithDelayedJobKey < SimpleJob
+  attr_accessor :delayed_job_key
 end
 
 class SimpleJobKeepSuccessful < SimpleJob
@@ -242,11 +239,10 @@ describe Delayed::Job do
     Delayed::Job.find_available(1).length.should == 0
   end
 
-  it "should inject delayed_job method into payload_object" do
-    Delayed::Job.enqueue SimpleJob.new
-    job = Delayed::Job.find(:first)
-    job.payload_object.delayed_job.should eql(job)
-    SimpleJob.new.respond_to?(:delayed_job).should be_false
+  it "should set delayed_job_key with unique_key when method exists" do
+    Delayed::Job.enqueue SimpleJobWithDelayedJobKey.new
+    Delayed::Job.last.payload_object.delayed_job_key.should eql(Delayed::Job.last.unique_key)
+    SimpleJobWithDelayedJobKey.new.delayed_job_key.should be_nil
   end
 
   context "when another worker is already performing an task, it" do

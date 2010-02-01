@@ -237,7 +237,7 @@ module Delayed
         handler = YAML.load(source)
       end
       
-      inject_delayed_job_method(handler)
+      handler.delayed_job_key = unique_key if handler.respond_to?(:delayed_job_key=)
 
       return handler if handler.respond_to?(:perform)
 
@@ -265,14 +265,6 @@ module Delayed
     # Uses Delayed::Job::max_attempts when not defined on handler
     def max_attempts
       (payload_object.class::max_attempts rescue nil) || self.class.max_attempts
-    end
-    
-    def inject_delayed_job_method(handler)
-      handler.class_eval("
-        def delayed_job
-          Delayed::Job.find(#{id})
-        end  
-      ")
     end
     
   protected
