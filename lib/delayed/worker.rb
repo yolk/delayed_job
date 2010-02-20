@@ -33,8 +33,12 @@ module Delayed
         count = result.sum
 
         if count.zero?
-          break if $exit
-          sleep(@@sleep_delay)
+          i = @@sleep_delay.to_f
+          while i > 0
+            break if $exit
+            sleep(0.5)
+            i = i - 0.5
+          end
         else
           say "#{count} jobs processed at %.4f j/s, %d failed ..." % [count / realtime, result.last]
         end
