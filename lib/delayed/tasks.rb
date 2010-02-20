@@ -10,6 +10,9 @@ namespace :jobs do
 
   desc "Start a delayed_job worker."
   task :work => [:merb_env, :environment] do
+    
+    worker_name = "delayed_job.#{Rails.env}.#{ENV["DJ_WORKER_INDEX"] || Process.pid}"
+    Delayed::Job.worker_name = "#{worker_name} #{Delayed::Job.worker_name}"
     Delayed::Worker.new(:min_priority => ENV['MIN_PRIORITY'], :max_priority => ENV['MAX_PRIORITY']).start
   end
 end
