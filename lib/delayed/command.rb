@@ -49,12 +49,12 @@ module Delayed
     end
     
     def run(worker_name = nil)
-      Dir.chdir(RAILS_ROOT)
+      Dir.chdir(Rails.root)
       
       # Re-open file handles
       @files_to_reopen.each do |file|
         begin
-          file.reopen File.join(RAILS_ROOT, 'log', 'delayed_job.log'), 'a+'
+          file.reopen File.join(Rails.root, 'log', 'delayed_job.log'), 'a+'
           file.sync = true
         rescue ::Exception
         end
