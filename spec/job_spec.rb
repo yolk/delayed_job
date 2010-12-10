@@ -73,8 +73,8 @@ describe Delayed::Job do
     later = (Delayed::Job.db_time_now+5.minutes)
     Delayed::Job.enqueue SimpleJob.new, 5, later
 
-    # use be close rather than equal to because millisecond values cn be lost in DB round trip
-    Delayed::Job.first.run_at.should be_close(later, 1)
+    # use be_within.within rather than equal to because millisecond values cn be lost in DB round trip
+    Delayed::Job.first.run_at.should be_within(1).of(later)
   end
 
   it "should call perform on jobs when running work_off" do

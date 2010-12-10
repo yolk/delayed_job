@@ -21,14 +21,10 @@ Jeweler::Tasks.new do |s|
   s.test_files = Dir['spec/**/*']
 end
 
-require 'spec/rake/spectask'
-
-task :default => :spec
+require 'rspec/core/rake_task'
 
 desc 'Run the specs'
-Spec::Rake::SpecTask.new(:spec) do |t|
-  t.libs << 'lib'
-  t.pattern = 'spec/**/*_spec.rb'
-  t.verbose = true
-end
+RSpec::Core::RakeTask.new(:spec)
+
+task :default => :spec
 
