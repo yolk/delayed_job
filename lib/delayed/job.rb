@@ -33,7 +33,7 @@ module Delayed
     cattr_accessor :worker_name
     self.worker_name = "host:#{Socket.gethostname}" rescue "host:unknown"
 
-    NextTaskSQL         = '(run_at <= ? AND (locked_at IS NULL OR locked_at < ?) OR (locked_by = ?)) AND completed_at IS NULL'
+    NextTaskSQL         = '(run_at <= ? AND (locked_at IS NULL OR locked_at < ?) OR (locked_by = ?)) AND state IS NULL'
     NextTaskOrder       = 'priority DESC, run_at ASC'
 
     ParseObjectFromYaml = /\!ruby\/\w+\:([^\s]+)/
@@ -276,24 +276,30 @@ module Delayed
     
     def failed!
       self.state = "failed"
-      self.completed_at = self.class.db_time_now
       save!
     end
     
     def successful!
       self.state = "successful"
-      self.completed_at = self.class.db_time_now
       save!
     end
     
   protected
 
-    before_save :set_run_at
+    before_save :set_run_at, :guard_state
     
     def set_run_at
       self.run_at ||= self.class.db_time_now
     end
-
+    
+    def guard_state
+      if failed? || successful?
+        self.completed_at = self.class.db_time_now if state_changed?
+      else
+        self.state = nil
+        self.completed_at = nil
+      end
+    end
   end
 
   class EvaledJob
