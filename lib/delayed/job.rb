@@ -75,10 +75,8 @@ module Delayed
     # Uses an exponential scale depending on the number of failed attempts.
     def reschedule(message, backtrace = [], time = nil)
       if (self.attempts += 1) < max_attempts
-        time ||= Job.db_time_now + (attempts ** 4) + 5
-
-        self.run_at       = time
-        self.last_error   = message + "\n" + backtrace.join("\n")
+        self.run_at     = time || Job.db_time_now + (attempts ** 4) + 5
+        self.last_error = message + "\n" + backtrace.join("\n")
         self.unlock
         save!
       else
@@ -107,7 +105,6 @@ module Delayed
           Timeout.timeout(max_run_time.to_i) { invoke_job }
           destroy
         end
-        # TODO: warn if runtime > max_run_time ?
         logger.info "* [JOB #{name}] Completed after %.4f" % runtime
         return true  # did work
       rescue Exception => e
