@@ -48,11 +48,11 @@ module Delayed
     end
     
     def failed?
-      self.state == "failed"
+      state == "failed"
     end
     
     def successful?
-      self.state == "successful"
+      state == "successful"
     end
     
     def payload_object
