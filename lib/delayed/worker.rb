@@ -17,8 +17,8 @@ module Delayed
     def start
       say "*** Starting job worker #{Delayed::Job.worker_name}"
 
-      trap('TERM') { say 'Exiting...'; $exit = true }
-      trap('INT')  { say 'Exiting...'; $exit = true }
+      trap('TERM') { say 'Shutting down after all aquired jobs finished...'; $exit = true }
+      trap('INT')  { say 'Shutting down after all aquired jobs finished...'; $exit = true }
 
       loop do
         result = nil
@@ -42,7 +42,9 @@ module Delayed
 
         break if $exit
       end
-
+      
+      say "Shutting down now!"
+      
     ensure
       Delayed::Job.clear_locks!
     end
