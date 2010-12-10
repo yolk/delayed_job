@@ -7,7 +7,3 @@ require File.dirname(__FILE__) + '/delayed/worker'
 
 Object.send(:include, Delayed::MessageSending)   
 Module.send(:include, Delayed::MessageSending::ClassMethods)
-
-if defined?(Merb::Plugins)
-  Merb::Plugins.add_rakefiles File.dirname(__FILE__) / 'delayed' / 'tasks'
-end

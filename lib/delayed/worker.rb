@@ -1,13 +1,10 @@
 module Delayed
   class Worker
     @@sleep_delay = 5
-    
     cattr_accessor :sleep_delay
 
     cattr_accessor :logger
-    self.logger = if defined?(Merb::Logger)
-      Merb.logger
-    elsif defined?(Rails)
+    self.logger = if defined?(Rails)
       Rails.logger
     end
 
