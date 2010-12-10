@@ -28,6 +28,12 @@ class SimpleJobKeepSuccessful < SimpleJob
   end
 end
 
+class SimpleJobKeepSuccessfulWithComplexResult < SimpleJobKeepSuccessful
+  def perform
+    {:this => "is", :really => ["complex"], :isnt => :it}
+  end
+end
+
 module M
   class ModuleJob
     cattr_accessor :runs; self.runs = 0
@@ -271,6 +277,17 @@ describe Delayed::Job do
       it "should never find succesful jobs for processing" do
         Delayed::Job.find_available(1).should be_empty
       end
+      
+      it "should store returned value in result" do
+        @job.reload.result.should eql(1)
+      end
+      
+      it "should store more complex results (like an hash)" do
+        @job = Delayed::Job.create :payload_object => SimpleJobKeepSuccessfulWithComplexResult.new
+        Delayed::Job.reserve_and_run_one_job
+        @job.reload.result.should == {:this => "is", :really => ["complex"], :isnt => :it}
+      end
+      
     end
   end
   

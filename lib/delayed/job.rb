@@ -71,15 +71,24 @@ module Delayed
     end
 
     def payload_object=(object)
-      self['handler'] = object.to_yaml
+      self.handler = object.to_yaml
     end
+    
+    def result=(data)
+      write_attribute(:result, data.to_yaml)
+    end
+    
+    def result
+      YAML.load(read_attribute(:result)) rescue ""
+    end
+    alias_method :last_error, :result
 
     # Reschedule the job in the future (when a job fails).
     # Uses an exponential scale depending on the number of failed attempts.
     def reschedule(message, backtrace = [], time = nil)
       if (self.attempts += 1) < max_attempts
         self.run_at     = time || Job.db_time_now + (attempts ** 4) + 5
-        self.last_error = message + "\n" + backtrace.join("\n")
+        self.result     = message + "\n" + backtrace.join("\n")
         self.unlock
         save!
       else
@@ -104,7 +113,7 @@ module Delayed
 
       begin
         runtime = Benchmark.realtime do
-          Timeout.timeout(max_run_time.to_i) { invoke_job }
+          Timeout.timeout(max_run_time.to_i) { self.result = invoke_job }
           if payload_object.respond_to?(:keep_job_after_success?) && payload_object.keep_job_after_success?
             successful!
           else
@@ -230,7 +239,7 @@ module Delayed
     def invoke_job
       payload_object.perform
     end
-
+    
   private
 
     def deserialize(source)

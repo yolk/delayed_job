@@ -19,7 +19,7 @@ ActiveRecord::Schema.define do
     table.integer  :priority, :default => 0
     table.integer  :attempts, :default => 0
     table.text     :handler
-    table.string   :last_error
+    table.text     :result
     table.datetime :run_at
     table.datetime :locked_at
     table.string   :locked_by
