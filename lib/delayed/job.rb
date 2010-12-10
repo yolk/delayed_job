@@ -108,7 +108,7 @@ module Delayed
           destroy
         end
         # TODO: warn if runtime > max_run_time ?
-        logger.info "* [JOB #{completed}] Completed after %.4f" % runtime
+        logger.info "* [JOB #{name}] Completed after %.4f" % runtime
         return true  # did work
       rescue Exception => e
         reschedule e.message, e.backtrace
