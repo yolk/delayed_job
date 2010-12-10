@@ -50,8 +50,11 @@ module Delayed
     def failed?
       self.state == "failed"
     end
-    alias_method :failed, :failed?
-
+    
+    def successful?
+      self.state == "successful"
+    end
+    
     def payload_object
       @payload_object ||= deserialize(self['handler'])
     end
@@ -102,9 +105,13 @@ module Delayed
       begin
         runtime = Benchmark.realtime do
           Timeout.timeout(max_run_time.to_i) { invoke_job }
-          destroy
+          if payload_object.respond_to?(:keep_job_after_success?) && payload_object.keep_job_after_success?
+            successful!
+          else
+            destroy
+          end
         end
-        logger.info "* [JOB #{name}] Completed after %.4f" % runtime
+        logger.info "* [JOB #{name}] Completed and #{self.successful? ? 'kept' : 'removed'} after %.4f" % runtime
         return true  # did work
       rescue Exception => e
         reschedule e.message, e.backtrace
@@ -269,6 +276,12 @@ module Delayed
     
     def failed!
       self.state = "failed"
+      self.completed_at == self.class.db_time_now
+      save!
+    end
+    
+    def successful!
+      self.state = "successful"
       self.completed_at == self.class.db_time_now
       save!
     end

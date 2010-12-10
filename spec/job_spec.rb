@@ -11,7 +11,7 @@ class ErrorJob
 end             
 
 class LongRunningJob
-  def perform; sleep 250; end
+  def perform; sleep 2; end
 end
 
 class SimpleJobWithCustomMaxAttempts < SimpleJob
@@ -23,8 +23,9 @@ class SimpleJobWithDelayedJobKey < SimpleJob
 end
 
 class SimpleJobKeepSuccessful < SimpleJob
-  @@destroy_after_success = false
-  cattr_reader :destroy_after_success
+  def keep_job_after_success?
+    true
+  end
 end
 
 module M
@@ -41,36 +42,64 @@ describe Delayed::Job do
     Delayed::Job.delete_all
     SimpleJob.runs = 0
   end
+  
+  context "on creation" do
+    let(:job) { Delayed::Job.create(:payload_object => ErrorJob.new) }
+    
+    it "should set run_at automatically if not set" do
+      job.run_at.should_not == nil
+    end
 
-  it "should set run_at automatically if not set" do
-    Delayed::Job.create(:payload_object => ErrorJob.new ).run_at.should_not == nil
+    it "should not set run_at automatically if already set" do
+      later = (Delayed::Job.db_time_now + 5.minutes)
+      Delayed::Job.create(:payload_object => ErrorJob.new, :run_at => later).run_at.should == later
+    end
+    
+    it "should set unique_key automatically to random value" do
+      job.unique_key.should_not be_nil
+      job.unique_key.should_not eql(Delayed::Job.create(:payload_object => ErrorJob.new ).unique_key)
+      job.unique_key.size.should eql(20)
+    end
+    
+    it "should set state to nil by default" do
+      job.state.should be_nil
+    end
+
+    it "should set completed_at to nil by default" do
+      job.completed_at.should be_nil
+    end
+    
+    it "should not be failed" do
+      job.should_not be_failed
+    end
+    
+    it "should not be successful" do
+      job.should_not be_successful
+    end
   end
+  
+  context "on enqueuing" do
+    it "should raise ArgumentError when handler doesn't respond_to :perform" do
+      lambda { Delayed::Job.enqueue(Object.new) }.should raise_error(ArgumentError)
+    end
 
-  it "should not set run_at automatically if already set" do
-    later = (Delayed::Job.db_time_now + 5.minutes)
-    Delayed::Job.create(:payload_object => ErrorJob.new, :run_at => later).run_at.should == later
-  end
+    it "should increase count after enqueuing items" do
+      Delayed::Job.enqueue SimpleJob.new
+      Delayed::Job.count.should == 1
+    end
 
-  it "should raise ArgumentError when handler doesn't respond_to :perform" do
-    lambda { Delayed::Job.enqueue(Object.new) }.should raise_error(ArgumentError)
-  end
+    it "should be able to set priority when enqueuing items" do
+      Delayed::Job.enqueue SimpleJob.new, 5
+      Delayed::Job.first.priority.should == 5
+    end
 
-  it "should increase count after enqueuing items" do
-    Delayed::Job.enqueue SimpleJob.new
-    Delayed::Job.count.should == 1
-  end
+    it "should be able to set run_at when enqueuing items" do
+      later = (Delayed::Job.db_time_now+5.minutes)
+      Delayed::Job.enqueue SimpleJob.new, 5, later
 
-  it "should be able to set priority when enqueuing items" do
-    Delayed::Job.enqueue SimpleJob.new, 5
-    Delayed::Job.first.priority.should == 5
-  end
-
-  it "should be able to set run_at when enqueuing items" do
-    later = (Delayed::Job.db_time_now+5.minutes)
-    Delayed::Job.enqueue SimpleJob.new, 5, later
-
-    # use be_within.within rather than equal to because millisecond values cn be lost in DB round trip
-    Delayed::Job.first.run_at.should be_within(1).of(later)
+      # use be_within.within rather than equal to because millisecond values cn be lost in DB round trip
+      Delayed::Job.first.run_at.should be_within(1).of(later)
+    end
   end
 
   it "should call perform on jobs when running work_off" do
@@ -81,14 +110,7 @@ describe Delayed::Job do
 
     SimpleJob.runs.should == 1
   end
-  
-  it "should set unique_key automatically to random value if not set" do
-    key = Delayed::Job.create(:payload_object => ErrorJob.new ).unique_key
-    key.should_not be_nil
-    key.should_not eql(Delayed::Job.create(:payload_object => ErrorJob.new ).unique_key)
-    key.size.should eql(20)
-  end
-  
+    
   it "should not set unique_key automatically if already set" do
     key = "123"
     Delayed::Job.create(:payload_object => ErrorJob.new, :unique_key => key).unique_key.should == key
@@ -171,14 +193,6 @@ describe Delayed::Job do
     lambda { job.payload_object.perform }.should raise_error(Delayed::DeserializationError)
   end
   
-  it "should set state to nil by default" do
-    Delayed::Job.create(:payload_object => ErrorJob.new).state.should be_nil
-  end
-  
-  it "should set completed_at to nil by default" do
-    Delayed::Job.create(:payload_object => ErrorJob.new).completed_at.should be_nil
-  end
-  
   context "reschedule" do
     before do
       @job = Delayed::Job.create :payload_object => SimpleJob.new
@@ -197,6 +211,13 @@ describe Delayed::Job do
       it "should not be destroyed if failed fewer than Job::max_attempts times" do
         @job.should_not_receive(:destroy)
         (Delayed::Job::max_attempts - 1).times { @job.reschedule 'FAIL' }
+      end
+      
+      it "should use max_attempts from handler-Class when defined" do
+        @job = Delayed::Job.create :payload_object => SimpleJobWithCustomMaxAttempts.new, :attempts => 3
+        @job.should_receive(:destroy)
+        @job.reschedule 'FAIL'
+        SimpleJobWithCustomMaxAttempts.runs.should eql(0)
       end
     end
     
@@ -219,32 +240,43 @@ describe Delayed::Job do
     end
   end
   
-  it "should use max_attempts from handler-Class when defined" do
-    default = Delayed::Job.destroy_failed_jobs
-    Delayed::Job.destroy_failed_jobs = true
+  context "successful" do
     
-    @job = Delayed::Job.create :payload_object => SimpleJobWithCustomMaxAttempts.new, :attempts => 3
-    @job.should_receive(:destroy)
-    @job.reschedule 'FAIL'
-    SimpleJobWithCustomMaxAttempts.runs.should eql(0)
+    it "should remove successful jobs" do
+      @job = Delayed::Job.create :payload_object => SimpleJob.new
+      Delayed::Job.count.should eql(1)
+      Delayed::Job.reserve_and_run_one_job
+      Delayed::Job.count.should eql(0)
+    end
+
+    it "should keep job when Handler returns true on keep_job_after_success" do
+      @job = Delayed::Job.create :payload_object => SimpleJobKeepSuccessful.new
+      Delayed::Job.count.should eql(1)
+      Delayed::Job.reserve_and_run_one_job
+      Delayed::Job.count.should eql(1)
+      Delayed::Job.first.should eql(@job)
+      @job.reload.should be_successful
+    end
     
-    Delayed::Job.destroy_failed_jobs = default
   end
+  
+  context "failure" do
+    it "should fail after Job::max_run_time" do
+      @job = Delayed::Job.create :payload_object => LongRunningJob.new
+      Delayed::Job.reserve_and_run_one_job(1.second)
+      @job.reload.last_error.should =~ /expired/
+      @job.attempts.should eql(1)
+    end
 
-  it "should fail after Job::max_run_time" do
-    @job = Delayed::Job.create :payload_object => LongRunningJob.new
-    Delayed::Job.reserve_and_run_one_job(1.second)
-    @job.reload.last_error.should =~ /expired/
-    @job.attempts.should == 1
+    it "should never find failed jobs" do
+      @job = Delayed::Job.create :payload_object => SimpleJob.new, :attempts => 50, 
+        :completed_at => Delayed::Job.db_time_now, :state => "failed"
+
+      Delayed::Job.find_available(1).should be_empty
+    end
+    
   end
-
-  it "should never find failed jobs" do
-    @job = Delayed::Job.create :payload_object => SimpleJob.new, :attempts => 50, 
-      :completed_at => Delayed::Job.db_time_now, :state => "failed"
-      
-    Delayed::Job.find_available(1).length.should == 0
-  end
-
+  
   it "should set delayed_job_key with unique_key when method exists" do
     Delayed::Job.enqueue SimpleJobWithDelayedJobKey.new
     Delayed::Job.last.payload_object.delayed_job_key.should eql(Delayed::Job.last.unique_key)
