@@ -276,13 +276,13 @@ module Delayed
     
     def failed!
       self.state = "failed"
-      self.completed_at == self.class.db_time_now
+      self.completed_at = self.class.db_time_now
       save!
     end
     
     def successful!
       self.state = "successful"
-      self.completed_at == self.class.db_time_now
+      self.completed_at = self.class.db_time_now
       save!
     end
     

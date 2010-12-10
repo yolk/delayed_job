@@ -242,22 +242,36 @@ describe Delayed::Job do
   
   context "successful" do
     
-    it "should remove successful jobs" do
-      @job = Delayed::Job.create :payload_object => SimpleJob.new
-      Delayed::Job.count.should eql(1)
-      Delayed::Job.reserve_and_run_one_job
-      Delayed::Job.count.should eql(0)
-    end
-
-    it "should keep job when Handler returns true on keep_job_after_success" do
-      @job = Delayed::Job.create :payload_object => SimpleJobKeepSuccessful.new
-      Delayed::Job.count.should eql(1)
-      Delayed::Job.reserve_and_run_one_job
-      Delayed::Job.count.should eql(1)
-      Delayed::Job.first.should eql(@job)
-      @job.reload.should be_successful
+    context "on normal job" do
+      before do
+        Delayed::Job.create :payload_object => SimpleJob.new
+      end
+      
+      it "should remove successful jobs" do
+        Delayed::Job.reserve_and_run_one_job
+        Delayed::Job.count.should eql(0)
+      end
     end
     
+    context "on job which returns true on keep_job_after_success?" do
+      before do
+        @job = Delayed::Job.create :payload_object => SimpleJobKeepSuccessful.new
+        Delayed::Job.reserve_and_run_one_job
+      end
+      
+      it "should keep job" do
+        Delayed::Job.count.should eql(1)
+        Delayed::Job.first.should eql(@job)
+      end
+      
+      it "should mark job as succesful" do
+        @job.reload.should be_successful
+      end
+      
+      it "should never find succesful jobs for processing" do
+        Delayed::Job.find_available(1).should be_empty
+      end
+    end
   end
   
   context "failure" do
@@ -268,10 +282,11 @@ describe Delayed::Job do
       @job.attempts.should eql(1)
     end
 
-    it "should never find failed jobs" do
-      @job = Delayed::Job.create :payload_object => SimpleJob.new, :attempts => 50, 
-        :completed_at => Delayed::Job.db_time_now, :state => "failed"
-
+    it "should never find failed jobs for processing" do
+      Delayed::Job.max_attempts = 0
+      @job = Delayed::Job.create :payload_object => ErrorJob.new
+      Delayed::Job.reserve_and_run_one_job
+      @job.reload.should be_failed
       Delayed::Job.find_available(1).should be_empty
     end
     
