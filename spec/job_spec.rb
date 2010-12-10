@@ -37,12 +37,8 @@ end
 describe Delayed::Job do
   before do
     Delayed::Job.max_priority = nil
-    Delayed::Job.min_priority = nil      
-    
+    Delayed::Job.min_priority = nil
     Delayed::Job.delete_all
-  end
-  
-  before(:each) do
     SimpleJob.runs = 0
   end
 
@@ -175,6 +171,14 @@ describe Delayed::Job do
     lambda { job.payload_object.perform }.should raise_error(Delayed::DeserializationError)
   end
   
+  it "should set state to nil by default" do
+    Delayed::Job.create(:payload_object => ErrorJob.new).state.should be_nil
+  end
+  
+  it "should set completed_at to nil by default" do
+    Delayed::Job.create(:payload_object => ErrorJob.new).completed_at.should be_nil
+  end
+  
   context "reschedule" do
     before do
       @job = Delayed::Job.create :payload_object => SimpleJob.new
@@ -202,14 +206,14 @@ describe Delayed::Job do
       end
       
       it "should be failed if it failed Job::max_attempts times" do
-        @job.reload.failed_at.should == nil
+        @job.reload.should_not be_failed
         (Delayed::Job::max_attempts).times { @job.reschedule 'FAIL' }
-        @job.reload.failed_at.should_not == nil
+        @job.reload.should be_failed
       end
 
       it "should not be failed if it failed fewer than Job::max_attempts times" do
         (Delayed::Job::max_attempts - 1).times { @job.reschedule 'FAIL' }
-        @job.reload.failed_at.should == nil
+        @job.reload.should_not be_failed
       end
       
     end
@@ -235,7 +239,9 @@ describe Delayed::Job do
   end
 
   it "should never find failed jobs" do
-    @job = Delayed::Job.create :payload_object => SimpleJob.new, :attempts => 50, :failed_at => Delayed::Job.db_time_now
+    @job = Delayed::Job.create :payload_object => SimpleJob.new, :attempts => 50, 
+      :completed_at => Delayed::Job.db_time_now, :state => "failed"
+      
     Delayed::Job.find_available(1).length.should == 0
   end
 

@@ -33,7 +33,7 @@ module Delayed
     cattr_accessor :worker_name
     self.worker_name = "host:#{Socket.gethostname}" rescue "host:unknown"
 
-    NextTaskSQL         = '(run_at <= ? AND (locked_at IS NULL OR locked_at < ?) OR (locked_by = ?)) AND failed_at IS NULL'
+    NextTaskSQL         = '(run_at <= ? AND (locked_at IS NULL OR locked_at < ?) OR (locked_by = ?)) AND completed_at IS NULL'
     NextTaskOrder       = 'priority DESC, run_at ASC'
 
     ParseObjectFromYaml = /\!ruby\/\w+\:([^\s]+)/
@@ -46,9 +46,9 @@ module Delayed
     def self.clear_locks!
       update_all("locked_by = null, locked_at = null", ["locked_by = ?", worker_name])
     end
-
+    
     def failed?
-      failed_at
+      self.state == "failed"
     end
     alias_method :failed, :failed?
 
@@ -85,11 +85,10 @@ module Delayed
           destroy
         else
           logger.info "* [JOB #{name}] Giving up after #{attempts} failures."
-          update_attribute(:failed_at, Delayed::Job.db_time_now)
+          failed!
         end
       end
     end
-
 
     # Try to run one job. Returns true/false (work done/work failed) or nil if job can't be locked.
     def run_with_lock(max_run_time, worker_name)
@@ -266,6 +265,12 @@ module Delayed
     # Uses Delayed::Job::max_attempts when not defined on handler
     def max_attempts
       (payload_object.class::max_attempts rescue nil) || self.class.max_attempts
+    end
+    
+    def failed!
+      self.state = "failed"
+      self.completed_at == self.class.db_time_now
+      save!
     end
     
   protected
