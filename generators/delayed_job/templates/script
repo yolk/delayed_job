@@ -4,7 +4,10 @@ ENV['RAILS_ENV'] ||= ARGV[0] || 'development'
 worker_index = ARGV[1] || Process.pid
 require File.expand_path(File.join(File.dirname(__FILE__), '..', 'config', 'environment'))
 
-Delayed::Job.worker_name = "dj.#{Rails.env}.#{worker_index}@#{Socket.gethostname}"
+# Ugly hack
+Rails.logger.instance_variable_get(:"@log").reopen(File.join(Rails.root, 'log', "delayed_job_#{Rails.env}.log"), 'a+')
+Rails.logger.instance_variable_get(:"@log").sync = true
+Delayed::Worker.logger = Rails.logger
 
-Delayed::Worker.logger = ActiveSupport::BufferedLogger.new(Rails.root.join('log', "delayed_job_#{Rails.env}.log"))
+Delayed::Job.worker_name = "dj.#{Rails.env}.#{worker_index}@#{Socket.gethostname}"
 Delayed::Worker.new(:min_priority => ENV['MIN_PRIORITY'], :max_priority => ENV['MAX_PRIORITY'], :quiet => true).start

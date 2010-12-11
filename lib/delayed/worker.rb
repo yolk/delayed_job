@@ -9,16 +9,16 @@ module Delayed
     end
 
     def initialize(options={})
-      @quiet = options[:quiet]
+      @quiet = !!options[:quiet]
       Delayed::Job.min_priority = options[:min_priority] if options.has_key?(:min_priority)
       Delayed::Job.max_priority = options[:max_priority] if options.has_key?(:max_priority)
     end
 
     def start
-      say "*** Starting job worker #{Delayed::Job.worker_name}"
+      log "*** Starting job worker #{Delayed::Job.worker_name}"
 
-      trap('TERM') { say 'Shutting down after all aquired jobs finished...'; $exit = true }
-      trap('INT')  { say 'Shutting down after all aquired jobs finished...'; $exit = true }
+      trap('TERM') { log 'Shutting down after all aquired jobs finished...'; $exit = true }
+      trap('INT')  { log 'Shutting down after all aquired jobs finished...'; $exit = true }
 
       loop do
         result = nil
@@ -37,22 +37,43 @@ module Delayed
             i = i - 0.5
           end
         else
-          say "#{count} jobs processed at %.4f j/s, %d failed ..." % [count / realtime, result.last]
+          log "#{count} jobs processed at %.4f j/sec, %d failed ..." % [count / realtime, result.last]
         end
 
         break if $exit
       end
       
-      say "Shutting down now!"
+      log "Shutting down now!"
       
     ensure
       Delayed::Job.clear_locks!
     end
 
-    def say(text)
-      puts text unless @quiet
+    def log(text)
+      self.class.log(text, @quiet)
+    end
+    alias_method :say, :log # rpm compatibility
+    
+    def self.log(text, quiet=true)
+      puts text unless quiet
       if logger
-        logger.info text
+        logger.info "[#{Time.now}] #{text}"
+        logger.flush if logger.respond_to?(:flush)
+      end
+    end
+    
+    def self.log_warn(text, quiet=true)
+      puts text unless quiet
+      if logger
+        logger.warn "[#{Time.now}] #{text}"
+        logger.flush if logger.respond_to?(:flush)
+      end
+    end
+    
+    def self.log_error(text, quiet=true)
+      puts text unless quiet
+      if logger
+        logger.error "[#{Time.now}] #{text}"
         logger.flush if logger.respond_to?(:flush)
       end
     end
