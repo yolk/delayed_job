@@ -113,8 +113,9 @@ module Delayed
 
       begin
         runtime = Benchmark.realtime do
-          Timeout.timeout(max_run_time.to_i) { self.result = invoke_job }
+          returned = Timeout.timeout(max_run_time.to_i) { invoke_job }
           if payload_object.respond_to?(:keep_job_after_success?) && payload_object.keep_job_after_success?
+            self.result = returned
             successful!
           else
             destroy
