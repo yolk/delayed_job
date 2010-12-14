@@ -212,8 +212,12 @@ module Delayed
 
     # This is a good hook if you need to report job processing errors in additional or different ways
     def log_exception(error)
+      on_exception(error)
       Delayed::Worker.log_error "* [JOB #{name}] Failed with #{error.class.name}: #{error.message} - #{attempts} of #{max_attempts} attempts"
     end
+    
+    # Exception hook
+    def on_exception(error);end
 
     # Do num jobs and return stats on success/failure.
     # Exit early if interrupted.
