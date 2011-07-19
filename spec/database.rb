@@ -1,8 +1,7 @@
 $:.unshift(File.dirname(__FILE__) + '/../lib')
 
-require 'rubygems'
 require 'active_record'
-gem 'sqlite3-ruby'
+require 'sqlite3'
 
 require File.dirname(__FILE__) + '/../init'
 require 'rspec'
