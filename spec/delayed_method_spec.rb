@@ -91,7 +91,7 @@ describe 'random ruby objects' do
     job =  Delayed::Job.find(:first)
     job.payload_object.class.should   == Delayed::PerformableMethod
     job.payload_object.object.should  == "AR:Story:#{story.id}"
-    job.payload_object.method.should  == :tell
+    job.payload_object.method_name.should  == :tell
     job.payload_object.args.should    == []
     job.payload_object.perform.should == 'Once upon...'
   end
@@ -105,7 +105,7 @@ describe 'random ruby objects' do
 
     job =  Delayed::Job.find(:first)
     job.payload_object.class.should   == Delayed::PerformableMethod
-    job.payload_object.method.should  == :read
+    job.payload_object.method_name.should  == :read
     job.payload_object.args.should    == ["AR:Story:#{story.id}"]
     job.payload_object.perform.should == 'Epilog: Once upon...'
   end                 
@@ -120,7 +120,7 @@ describe 'random ruby objects' do
     Delayed::Job.count.should == 1
     job =  Delayed::Job.find(:first)
     job.payload_object.class.should   == Delayed::PerformableMethod
-    job.payload_object.method.should  == :whatever_without_send_later
+    job.payload_object.method_name.should  == :whatever_without_send_later
     job.payload_object.args.should    == [1, 5]
     job.payload_object.perform.should == 'Once upon...'
   end
@@ -141,7 +141,7 @@ describe 'random ruby objects' do
     it "should store payload as PerformableMethod" do
       job = "string".send_at(1.hour.from_now, :count, 'r')
       job.payload_object.class.should   == Delayed::PerformableMethod
-      job.payload_object.method.should  == :count
+      job.payload_object.method_name.should  == :count
       job.payload_object.args.should    == ['r']
       job.payload_object.perform.should == 1
     end
