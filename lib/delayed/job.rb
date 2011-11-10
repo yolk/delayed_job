@@ -24,7 +24,7 @@ module Delayed
     # Every job has a unique key which you can pass to the user (javascript) without
     # alowing him to quess subsequent keys.
     before_create do |job|
-      job.unique_key ||= ActiveSupport::SecureRandom.hex(10)
+      job.unique_key ||= (defined?(::SecureRandom) ? ::SecureRandom : ActiveSupport::SecureRandom).hex(10)
     end
     
     # Every worker has a unique name which by default is the pid of the process.
