@@ -13,7 +13,7 @@ module Delayed
     
     cattr_accessor :max_attempts, :max_run_time
     
-    set_table_name :delayed_jobs
+    self.table_name = :delayed_jobs
 
     # By default failed jobs are destroyed after too many attempts.
     # If you want to keep them around (perhaps to inspect the reason
