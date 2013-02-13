@@ -10,9 +10,9 @@ module Delayed
   class Job < ActiveRecord::Base
     @@max_attempts = 25
     @@max_run_time = 4.hours
-    
+
     cattr_accessor :max_attempts, :max_run_time
-    
+
     self.table_name = :delayed_jobs
 
     # By default failed jobs are destroyed after too many attempts.
@@ -20,13 +20,13 @@ module Delayed
     # for the failure), set this to false.
     cattr_accessor :destroy_failed_jobs
     self.destroy_failed_jobs = true
-    
+
     # Every job has a unique key which you can pass to the user (javascript) without
     # alowing him to quess subsequent keys.
     before_create do |job|
       job.unique_key ||= (defined?(::SecureRandom) ? ::SecureRandom : ActiveSupport::SecureRandom).hex(10)
     end
-    
+
     # Every worker has a unique name which by default is the pid of the process.
     # There are some advantages to overriding this with something which survives worker retarts:
     # Workers can safely resume working on tasks which are locked by themselves. The worker will assume that it crashed before.
@@ -46,15 +46,15 @@ module Delayed
     def self.clear_locks!
       update_all("locked_by = null, locked_at = null", ["locked_by = ?", worker_name])
     end
-    
+
     def failed?
       state == "failed"
     end
-    
+
     def successful?
       state == "successful"
     end
-    
+
     def payload_object
       @payload_object ||= deserialize(self['handler'])
     end
@@ -73,11 +73,11 @@ module Delayed
     def payload_object=(object)
       self.handler = object.to_yaml
     end
-    
+
     def result=(data)
       write_attribute(:result, data.to_yaml)
     end
-    
+
     def result
       YAML.load(read_attribute(:result)) rescue ""
     end
@@ -137,7 +137,7 @@ module Delayed
       unless object.respond_to?(:perform) || block_given?
         raise ArgumentError, 'Cannot enqueue items which do not respond to perform'
       end
-    
+
       priority = args.first || 0
       run_at   = args[1]
 
@@ -216,7 +216,7 @@ module Delayed
       on_exception(error)
       Delayed::Worker.log_error "* [JOB #{name}] Failed with #{error.class.name}: #{error.message} - #{attempts} of #{max_attempts} attempts"
     end
-    
+
     # Exception hook
     def on_exception(error);end
 
@@ -244,7 +244,7 @@ module Delayed
     def invoke_job
       payload_object.perform
     end
-    
+
   private
 
     def deserialize(source)
@@ -257,7 +257,7 @@ module Delayed
         attempt_to_load(handler_class || handler.class)
         handler = YAML.load(source)
       end
-      
+
       handler.delayed_job_key = unique_key if handler.respond_to?(:delayed_job_key=)
 
       return handler if handler.respond_to?(:perform)
@@ -281,31 +281,31 @@ module Delayed
     def self.db_time_now
       (ActiveRecord::Base.default_timezone == :utc) ? Time.now.utc : Time.zone.now
     end
-    
+
     # Use handler-specific max_attempts before giving up.
     # Uses Delayed::Job::max_attempts when not defined on handler
     def max_attempts
       (payload_object.class::max_attempts rescue nil) || self.class.max_attempts
     end
-    
+
     def failed!
       self.state = "failed"
       save!
     end
-    
+
     def successful!
       self.state = "successful"
       save!
     end
-    
+
   protected
 
     before_save :set_run_at, :guard_state
-    
+
     def set_run_at
       self.run_at ||= self.class.db_time_now
     end
-    
+
     def guard_state
       if failed? || successful?
         self.completed_at = self.class.db_time_now if state_changed?

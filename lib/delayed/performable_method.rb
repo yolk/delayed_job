@@ -10,14 +10,14 @@ module Delayed
       self.args   = args.map { |a| dump(a) }
       self.method_name = method_name.to_sym
     end
-    
-    def display_name  
+
+    def display_name
       case self.object
       when CLASS_STRING_FORMAT then "#{$1}.#{method_name}"
       when AR_STRING_FORMAT    then "#{$1}##{method_name}"
       else "Unknown##{method_name}"
-      end      
-    end    
+      end
+    end
 
     def perform
       load(object).send(method_name, *args.map{|a| load(a)})
