@@ -19,8 +19,8 @@ module Delayed
     def start
       log "*** Starting job worker #{Delayed::Job.worker_name}"
 
-      trap('TERM') { puts 'Shutting down after all aquired jobs finished...'; $exit = true }
-      trap('INT')  { puts 'Shutting down after all aquired jobs finished...'; $exit = true }
+      trap('TERM') { puts "[#{Time.now}] (#{$$}) Shutting down after all aquired jobs finished..."; $exit = true }
+      trap('INT')  { puts "[#{Time.now}] (#{$$}) Shutting down after all aquired jobs finished..."; $exit = true }
 
       loop do
         result = nil
@@ -59,7 +59,7 @@ module Delayed
     def self.log(text, quiet=true)
       puts text unless quiet
       if logger
-        logger.info "[#{Time.now}] #{text}"
+        logger.info "[#{Time.now}] (#{$$}) #{text}"
         logger.flush if logger.respond_to?(:flush)
       end
     end
@@ -67,7 +67,7 @@ module Delayed
     def self.log_warn(text, quiet=true)
       puts text unless quiet
       if logger
-        logger.warn "[#{Time.now}] #{text}"
+        logger.warn "[#{Time.now}] (#{$$}) #{text}"
         logger.flush if logger.respond_to?(:flush)
       end
     end
@@ -75,7 +75,7 @@ module Delayed
     def self.log_error(text, quiet=true)
       puts text unless quiet
       if logger
-        logger.error "[#{Time.now}] #{text}"
+        logger.error "[#{Time.now}] (#{$$}) #{text}"
         logger.flush if logger.respond_to?(:flush)
       end
     end
