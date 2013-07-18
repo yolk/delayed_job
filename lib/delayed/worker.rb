@@ -1,3 +1,5 @@
+$exit
+
 module Delayed
   class Worker
     @@sleep_delay = 5
@@ -17,8 +19,8 @@ module Delayed
     def start
       log "*** Starting job worker #{Delayed::Job.worker_name}"
 
-      trap('TERM') { log 'Shutting down after all aquired jobs finished...'; $exit = true }
-      trap('INT')  { log 'Shutting down after all aquired jobs finished...'; $exit = true }
+      trap('TERM') { puts 'Shutting down after all aquired jobs finished...'; $exit = true }
+      trap('INT')  { puts 'Shutting down after all aquired jobs finished...'; $exit = true }
 
       loop do
         result = nil
@@ -42,9 +44,9 @@ module Delayed
 
         break if $exit
       end
-      
+
       log "Shutting down now!"
-      
+
     ensure
       Delayed::Job.clear_locks!
     end
@@ -53,7 +55,7 @@ module Delayed
       self.class.log(text, @quiet)
     end
     alias_method :say, :log # rpm compatibility
-    
+
     def self.log(text, quiet=true)
       puts text unless quiet
       if logger
@@ -61,7 +63,7 @@ module Delayed
         logger.flush if logger.respond_to?(:flush)
       end
     end
-    
+
     def self.log_warn(text, quiet=true)
       puts text unless quiet
       if logger
@@ -69,7 +71,7 @@ module Delayed
         logger.flush if logger.respond_to?(:flush)
       end
     end
-    
+
     def self.log_error(text, quiet=true)
       puts text unless quiet
       if logger
